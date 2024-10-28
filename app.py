@@ -14,7 +14,7 @@ from threading import Lock
 # Flaskアプリケーションの設定
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your_default_secret_key')  # 環境変数からSECRET_KEYを取得
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///instance/your_database.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/your_database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['UPLOAD_FOLDER'] = 'static/images'
