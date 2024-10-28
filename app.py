@@ -13,8 +13,11 @@ from threading import Lock
 
 # Flaskアプリケーションの設定
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your_default_secret_key')  # 環境変数からSECRET_KEYを取得
+
+# app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your_default_secret_key')  # 環境変数からSECRET_KEYを取得
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/your_database.db'
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///your_database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['UPLOAD_FOLDER'] = 'static/images'
@@ -481,9 +484,12 @@ def handle_flip_card(data):
         game_state = game_states[room_id]
 
         # 現在のターンのプレイヤーか確認
-        if game_state['current_turn'] != user.id:
+        if game_state['current_turn'] != user.name and game_state['current_turn'] != user.id:
             emit('error', {'message': '現在のターンではありません。'})
             print(f"エラー: {username} は現在のターンではありません。")
+            print(game_state['current_turn'])
+            print(user.name)
+            # print(game_state)
             return
 
         try:
@@ -571,19 +577,21 @@ def handle_flip_card(data):
                     socketio.start_background_task(delayed_game_over, room_id)
             else:
                 # マッチ失敗: 一定時間後にカードを裏返す
-                def reset_cards(room_id, card1_id, card2_id, user_id):
+                def reset_cards(room_id, card1_id, card2_id, user_id, card1, card2):
                     with app.app_context():
                         game_state = game_states.get(room_id)
                         if not game_state:
                             print(f"Game state for room {room_id} not found.")
                             return
 
+                        time.sleep(1)  # 1秒待機
+
                         # カードを裏返す
-                        card1 = Card.query.get(card1_id)
-                        card2 = Card.query.get(card2_id)
+                        # card1 = Card.query.get(card1_id)
+                        # card2 = Card.query.get(card2_id)
                         if card1 and card2:
-                            card1.is_flipped = False
-                            card2.is_flipped = False
+                            card1['is_flipped'] = False
+                            card2['is_flipped'] = False
                             db.session.commit()
 
                             # カードリセットを通知
@@ -605,7 +613,7 @@ def handle_flip_card(data):
                         game_state['flipped_cards'] = []
 
                 # 背景タスクでreset_cardsを実行
-                socketio.start_background_task(reset_cards, room_id, card1_id, card2_id, user.id)
+                socketio.start_background_task(reset_cards, room_id, card1_id, card2_id, user.id, card1, card2)
                 print(f"マッチ失敗: カード {card1_id} と {card2_id} が一致しませんでした。 Room ID: {room_id}")
 
 if __name__ == '__main__':
