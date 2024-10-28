@@ -597,7 +597,7 @@ def handle_flip_card(data):
                         game_state['flipped_cards'] = []
 
                 # 背景タスクでreset_cardsを実行
-                socketio.start_background_task(reset_cards)
+                socketio.start_background_task(reset_cards, room_id, card1_id, card2_id, user.id)
                 print(f"マッチ失敗: カード {card1_id} と {card2_id} が一致しませんでした。 Room ID: {room_id}")
 
 if __name__ == '__main__':
