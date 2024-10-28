@@ -2,7 +2,6 @@
 
 import os
 import random
-import uuid
 import time
 from flask import Flask, render_template, request, redirect, url_for, make_response, flash
 from flask_sqlalchemy import SQLAlchemy
@@ -14,7 +13,7 @@ from threading import Lock
 # Flaskアプリケーションの設定
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your_default_secret_key')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or 'sqlite:///instance/your_database.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or 'sqlite:////tmp/your_database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['UPLOAD_FOLDER'] = 'static/images'
@@ -22,7 +21,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
 
 # 必要なディレクトリが存在しない場合は作成
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-os.makedirs('instance', exist_ok=True)
+os.makedirs('/tmp', exist_ok=True)  # SQLiteファイルを/tmpに配置
 
 # 拡張機能の初期化
 db = SQLAlchemy(app)
@@ -82,8 +81,6 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-# ... （その他のルートや関数は省略）
 
 # ゲーム開始ルート
 @app.route('/start_game/<int:room_id>', methods=['POST'])
@@ -292,6 +289,14 @@ def handle_flip_card(data):
                 socketio.start_background_task(reset_cards)
                 print(f"マッチ失敗: カード {card1_id} と {card2_id} が一致しませんでした。 Room ID: {room_id}")
 
+# デプロイ後にデータベースを初期化するためのCLIコマンドを追加
+@app.cli.command("init-db")
+def init_db():
+    """データベースを初期化します。"""
+    with app.app_context():
+        db.create_all()
+        print("データベースが初期化されました。")
 
+# アプリケーションの起動
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=False)
+    socketio.run(app, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
