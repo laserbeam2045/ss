@@ -563,23 +563,38 @@ def handle_flip_card(data):
                     socketio.start_background_task(delayed_game_over)
             else:
                 # マッチ失敗: 一定時間後にカードを裏返す
-                def reset_cards():
-                    time.sleep(1)  # 1秒待機
-                    card1['is_flipped'] = False
-                    card2['is_flipped'] = False
-                    # 背景スレッドからemitを使用する際はsocketio.emitを使用
-                    socketio.emit('cards_reset', {'card1_id': card1_id, 'card2_id': card2_id}, room=room_id)
-                    print(f"カード {card1_id} と {card2_id} が Room {room_id} で裏返されました。")
+                def reset_cards(room_id, card1_id, card2_id, user_id):
+                    with app.app_context():
+                        game_state = game_states.get(room_id)
+                        if not game_state:
+                            print(f"Game state for room {room_id} not found.")
+                            return
 
-                    # ターンを次のプレイヤーに変更
-                    current_index = game_state['players'].index(user.id)
-                    next_player = game_state['players'][(current_index + 1) % len(game_state['players'])]
-                    game_state['current_turn'] = next_player
-                    next_player_name = User.query.get(next_player).name
-                    socketio.emit('turn_changed', {'current_turn': next_player_name}, room=room_id)
-                    print(f"ターンが {next_player_name} に変更されました。 Room ID: {room_id}")
+                        # カードを裏返す
+                        card1 = Card.query.get(card1_id)
+                        card2 = Card.query.get(card2_id)
+                        if card1 and card2:
+                            card1.is_flipped = False
+                            card2.is_flipped = False
+                            db.session.commit()
 
-                    game_state['flipped_cards'] = []
+                            # カードリセットを通知
+                            socketio.emit('cards_reset', {'card1_id': card1_id, 'card2_id': card2_id}, room=room_id)
+                            print(f"カード {card1_id} と {card2_id} が Room {room_id} で裏返されました。")
+
+                        # ターンを次のプレイヤーに変更
+                        players = game_state['players']
+                        current_index = players.index(user_id)
+                        next_player_id = players[(current_index + 1) % len(players)]
+                        next_player_obj = User.query.get(next_player_id)
+                        if next_player_obj:
+                            game_state['current_turn'] = next_player_obj.name
+                            db.session.commit()
+                            socketio.emit('turn_changed', {'current_turn': next_player_obj.name}, room=room_id)
+                            print(f"ターンが {next_player_obj.name} に変更されました。 Room ID: {room_id}")
+
+                        # フリップされたカードをリセット
+                        game_state['flipped_cards'] = []
 
                 # 背景タスクでreset_cardsを実行
                 socketio.start_background_task(reset_cards)
