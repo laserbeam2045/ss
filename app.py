@@ -25,7 +25,8 @@ os.makedirs('/tmp', exist_ok=True)  # SQLiteファイルを/tmpに配置
 
 # 拡張機能の初期化
 db = SQLAlchemy(app)
-socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins="*")
+# socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins="*")
+socketio = SocketIO(app, ping_timeout=60, ping_interval=25)
 Session(app)
 
 # データベースモデルの定義
