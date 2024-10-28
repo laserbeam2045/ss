@@ -539,29 +539,36 @@ def handle_flip_card(data):
                 all_matched = all(c['is_matched'] for c in game_state['cards'].values())
                 if all_matched:
                     # 遅延後にランキングを作成して表示
-                    def delayed_game_over():
+                    def delayed_game_over(room_id):
                         with app.app_context():
-                          time.sleep(1)  # 1秒待機
-                          ranking = sorted(game_state['scores'].items(), key=lambda x: x[1], reverse=True)
-                          ranking_data = []
-                          for user_id, score in ranking:
-                              user_obj = User.query.get(user_id)
-                              ranking_data.append({'username': user_obj.name, 'score': score})
-                          socketio.emit('game_over', {'ranking': ranking_data}, room=room_id)
-                          print(f"ゲーム終了: Room ID: {room_id} のランキングが送信されました。")
+                            time.sleep(1)  # 1秒待機
 
-                          # ルームの状態をリセット
-                          room_obj = Room.query.get(room_id)
-                          room_obj.status = 'waiting'
-                          db.session.commit()
+                            # 現在のゲーム状態を取得
+                            game_state = game_states.get(room_id)
+                            
+                            # ランキングを作成して全プレイヤーに送信
+                            if game_state:
+                                ranking = sorted(game_state['scores'].items(), key=lambda x: x[1], reverse=True)
+                                ranking_data = []
+                                for user_id, score in ranking:
+                                    user_obj = User.query.get(user_id)
+                                    ranking_data.append({'username': user_obj.name, 'score': score})
+                                socketio.emit('game_over', {'ranking': ranking_data}, room=room_id)
+                                print(f"ゲーム終了: Room ID: {room_id} のランキングが送信されました。")
 
-                          # ゲーム状態を削除
-                          with game_states_lock:
-                              if room_id in game_states:
-                                  del game_states[room_id]
+                                # ルームの状態を待機中に戻す
+                                room_obj = Room.query.get(room_id)
+                                room_obj.status = 'waiting'
+                                db.session.commit()
+
+                                # ゲーム状態を削除して完全にリセット
+                                with game_states_lock:
+                                    if room_id in game_states:
+                                        del game_states[room_id]  # ルームごとの状態をリセット
+                                print(f"Room {room_id} のゲーム状態が完全にリセットされました。")
 
                     # 背景タスクでdelayed_game_overを実行
-                    socketio.start_background_task(delayed_game_over)
+                    socketio.start_background_task(delayed_game_over, room_id)
             else:
                 # マッチ失敗: 一定時間後にカードを裏返す
                 def reset_cards(room_id, card1_id, card2_id, user_id):
