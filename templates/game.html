@@ -1,0 +1,309 @@
+<!-- templates/game.html -->
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>ゲーム画面</title>
+    <!-- 必要なCSSやJSのリンク -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            margin-top: 20px;
+            color: #333;
+            font-size: 2em;
+        }
+        #current-turn {
+            font-weight: bold;
+            color: #555;
+            font-size: 1.2em;
+        }
+        #cards-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); /* 1行につき4枚 */
+            gap: 10px;
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 10px;
+        }
+        .card {
+            width: 100%;
+            padding-top: 130%; /* アスペクト比を維持 */
+            position: relative;
+            perspective: 1000px;
+            cursor: pointer;
+        }
+        .card-inner {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border: 1px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #fff;
+        }
+        .card-front {
+            transform: rotateY(180deg);
+        }
+        .card-front img {
+            width: 80%;
+            height: auto;
+            object-fit: cover;
+            flex-grow: 1;
+        }
+        .card-front .card-text {
+            padding: 5px;
+            font-size: 16px; /* フォントサイズを大きく */
+            background-color: #f0f0f0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .card-back {
+            background-color: #333;
+        }
+        /* マッチしたカードのフェードアウト */
+        .card.matched {
+            animation: fadeOut 0.5s forwards;
+        }
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+        }
+        /* ゲーム終了時のスタイル */
+        #game-over {
+            display: none;
+            margin: 20px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        #game-over h2 {
+            font-size: 1.8em;
+            color: #333;
+        }
+        #ranking-list {
+            list-style-type: decimal;
+            padding-left: 20px;
+            text-align: left;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        #back-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1em;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #back-button:hover {
+            background-color: #45a049;
+        }
+        /* レスポンシブデザイン */
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.5em;
+            }
+            #current-turn {
+                font-size: 1em;
+            }
+            #cards-container {
+                grid-template-columns: repeat(2, 1fr); /* スマホでは1行に2枚 */
+                gap: 5px;
+                max-width: 100%;
+                padding: 5px;
+            }
+            .card {
+                padding-top: 100%; /* アスペクト比を調整 */
+            }
+            .card-front .card-text {
+                font-size: 14px; /* スマホでも読みやすいフォントサイズ */
+            }
+            #game-over h2 {
+                font-size: 1.5em;
+            }
+            #back-button {
+                font-size: 0.9em;
+                padding: 8px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>{{ room.name }}</h1>
+    <p>現在のターン: <span id="current-turn">{{ current_turn }}</span></p>
+    <div id="cards-container">
+        {% for card in cards %}
+            <div class="card" data-id="{{ card.id }}">
+                <div class="card-inner">
+                    <div class="card-front">
+                        <img src="{{ url_for('static', filename='images/' + card.image) }}" alt="{{ card.name }}">
+                        <div class="card-text">{{ card.name }}</div>
+                    </div>
+                    <div class="card-back"></div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div id="game-over">
+        <h2>ゲーム終了！ランキング</h2>
+        <ol id="ranking-list"></ol>
+        <button id="back-button" onclick="redirectToIndex()">ルーム一覧へ戻る</button>
+    </div>
+
+    <script type="text/javascript">
+        var socket = io();
+
+        var room_id = {{ room.id }};
+        var username = "{{ username }}";
+
+        // SocketIOへの接続時にルームに参加
+        socket.on('connect', function() {
+            console.log('SocketIO connected');
+            socket.emit('join_game', {'room': room_id, 'username': username});
+        });
+
+        // ゲーム状態の受信
+        socket.on('game_state', function(data) {
+            console.log('Game State Received:', data);
+            // カードの状態を更新
+            for (var card_id in data.cards) {
+                var card = data.cards[card_id];
+                var cardElement = document.querySelector('.card[data-id="' + card_id + '"]');
+                if (cardElement) {
+                    if (card.is_flipped || card.is_matched) {
+                        cardElement.classList.add('flipped');
+                    } else {
+                        cardElement.classList.remove('flipped');
+                    }
+                    if (card.is_matched) {
+                        cardElement.classList.add('matched');
+                    } else {
+                        cardElement.classList.remove('matched');
+                    }
+                }
+            }
+            // 現在のターンを更新
+            document.getElementById('current-turn').textContent = data.current_turn || "不明";
+        });
+
+        // ゲーム開始時の処理（アラートなし）
+        socket.on('game_started', function(data) {
+            console.log('Game Started Event Received:', data);
+            if (data.room_id === room_id) {
+                // 必要に応じてページをリロードまたはUIを更新
+                // 例: リロードしてゲーム画面を表示
+                window.location.href = "/game/" + room_id;
+            }
+        });
+
+        // カードがめくられたときの処理
+        socket.on('card_flipped', function(data) {
+            console.log('Card Flipped Event Received:', data);
+            var cardElement = document.querySelector('.card[data-id="' + data.card_id + '"]');
+            if (cardElement) {
+                cardElement.classList.add('flipped');
+            }
+        });
+
+        // カードのマッチ結果の処理（アラートなし）
+        socket.on('match_result', function(data) {
+            console.log('Match Result Event Received:', data);
+            if (data.matched) {
+                // マッチしたカードを一定時間後に非表示にする
+                setTimeout(function() {
+                    var card1 = document.querySelector('.card[data-id="' + data.card1_id + '"]');
+                    var card2 = document.querySelector('.card[data-id="' + data.card2_id + '"]');
+                    if (card1) card1.classList.add('matched');
+                    if (card2) card2.classList.add('matched');
+                }, 500); // 500ミリ秒後に非表示
+            }
+            // スコアの更新や他のUIの更新が必要な場合はここに追加
+        });
+
+        // カードがリセットされたときの処理
+        socket.on('cards_reset', function(data) {
+            console.log('Cards Reset Event Received:', data);
+            var card1 = document.querySelector('.card[data-id="' + data.card1_id + '"]');
+            var card2 = document.querySelector('.card[data-id="' + data.card2_id + '"]');
+            if (card1) card1.classList.remove('flipped');
+            if (card2) card2.classList.remove('flipped');
+        });
+
+        // ターンが変更されたときの処理
+        socket.on('turn_changed', function(data) {
+            console.log('Turn Changed Event Received:', data);
+            document.getElementById('current-turn').textContent = data.current_turn;
+        });
+
+        // ゲームが終了したときの処理
+        socket.on('game_over', function(data) {
+            console.log('Game Over Event Received:', data);
+            // 少し遅延させて表示
+            setTimeout(function() {
+                document.getElementById('cards-container').style.display = 'none';
+                document.getElementById('game-over').style.display = 'block';
+                var rankingList = document.getElementById('ranking-list');
+                rankingList.innerHTML = '';
+                data.ranking.forEach(function(player) {
+                    var listItem = document.createElement('li');
+                    listItem.textContent = player.username + ' - ' + player.score + ' 点';
+                    rankingList.appendChild(listItem);
+                });
+            }, 500); // 500ミリ秒後に表示
+        });
+
+        // エラーメッセージの処理
+        socket.on('error', function(data) {
+            console.error('Error Event Received:', data.message);
+            // 必要に応じてユーザーにエラーメッセージを通知します。
+            // ここではコンソールにのみ出力しています。
+            // alert(data.message); // 必要に応じてこのalertも削除可能です
+        });
+
+        // カードをクリックしたときの処理
+        document.querySelectorAll('.card').forEach(function(card) {
+            card.addEventListener('click', function() {
+                var cardId = this.getAttribute('data-id');
+                console.log('Card Clicked:', cardId);
+                socket.emit('flip_card', {'room': room_id, 'card_id': cardId, 'username': username});
+            });
+        });
+
+        // ゲーム終了後に一覧ページへ移動する関数
+        function redirectToIndex() {
+            window.location.href = "/";
+        }
+    </script>
+</body>
+</html>

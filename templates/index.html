@@ -1,0 +1,39 @@
+<!-- templates/index.html -->
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>ルーム一覧</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <h1>ルーム一覧</h1>
+    <a href="{{ url_for('create_room') }}">ルームを作成する</a>
+    <h2>利用可能なルーム:</h2>
+    <ul>
+        {% for room in rooms %}
+            <li>
+                {{ room.name }} - 参加者: {{ room.users|length }}
+                {% if room.status == 'waiting' %}
+                    <form action="{{ url_for('join_room_route', room_id=room.id) }}" method="post" style="display:inline;">
+                        <button type="submit">参加する</button>
+                    </form>
+                {% else %}
+                    <span>ゲーム中</span>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul>
+          {% for message in messages %}
+            <li>{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+</body>
+</html>

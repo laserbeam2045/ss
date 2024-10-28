@@ -1,0 +1,122 @@
+<!-- templates/room_detail.html -->
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>ルーム詳細</title>
+    <!-- 必要なCSSやJSのリンク -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+    <h1>{{ room.name }}</h1>
+    <h2>参加者リスト</h2>
+    <ul id="participants-list">
+        {% for u in users %}
+            <li>{{ u.name }}</li>
+        {% endfor %}
+    </ul>
+
+    <form action="{{ url_for('start_game', room_id=room.id) }}" method="post" id="start-game-form" {% if not can_start %}style="display: none;"{% endif %}>
+        <button type="submit">ゲームを開始する</button>
+    </form>
+
+    <button id="leave-room-button">ルームから離脱する</button>
+
+    <script type="text/javascript">
+        var socket = io();
+
+        var is_creator = {{ 'true' if is_creator else 'false' }};
+        var room_id = {{ room.id }};
+        var username = "{{ username }}";
+        var room_status = "{{ room.status }}";
+
+        // SocketIOへの接続時にルームに参加
+        socket.on('connect', function() {
+            console.log('SocketIO connected');
+            socket.emit('join_game', {'room': room_id, 'username': username});
+        });
+
+        // ゲーム開始時の処理
+        socket.on('game_started', function(data) {
+            console.log('Game Started Event Received:', data);
+            if (data.room_id === room_id) {
+                // alert('ゲームが開始されました！');
+                window.location.href = "{{ url_for('game', room_id=room.id) }}";
+            }
+        });
+
+        // 新しいユーザーが参加したときの処理
+        socket.on('user_joined', function(data) {
+            console.log('User Joined Event Received:', data.username);
+            var participantsList = document.getElementById('participants-list');
+            var newUser = document.createElement('li');
+            newUser.textContent = data.username;
+            participantsList.appendChild(newUser);
+            updateStartButton();
+        });
+
+        // ユーザーがルームを離脱したときの処理
+        socket.on('user_left', function(data) {
+            console.log('User Left Event Received:', data.username);
+            var participantsList = document.getElementById('participants-list');
+            var items = participantsList.getElementsByTagName('li');
+            for (var i = 0; i < items.length; i++) {
+                if (items[i].textContent === data.username) {
+                    participantsList.removeChild(items[i]);
+                    break;
+                }
+            }
+            updateStartButton();
+        });
+
+        // プレイヤーリストの更新
+        socket.on('update_player_list', function(data) {
+            console.log('Update Player List Received:', data.players);
+            var participantsList = document.getElementById('participants-list');
+            participantsList.innerHTML = '';  // リストをクリア
+            data.players.forEach(function(player) {
+                var listItem = document.createElement('li');
+                listItem.textContent = player;
+                participantsList.appendChild(listItem);
+            });
+            updateStartButton();
+        });
+
+        // エラーメッセージの処理
+        socket.on('error', function(data) {
+            console.error('Error Event Received:', data.message);
+            alert(data.message);
+        });
+
+        // ルームから離脱するボタンの処理
+        document.getElementById('leave-room-button').addEventListener('click', function() {
+            socket.emit('leave_game', {'room': room_id, 'username': username});
+        });
+
+        // ルームから離脱した際の処理
+        socket.on('left_room', function(data) {
+            alert(data.message);
+            window.location.href = "{{ url_for('index') }}";
+        });
+
+        // ゲーム開始ボタンの表示/非表示を更新する関数
+        function updateStartButton() {
+            if (is_creator) {
+                var participants = document.getElementById('participants-list').getElementsByTagName('li').length;
+                var startForm = document.getElementById('start-game-form');
+                if (participants >= 2 && room_status === "waiting") {
+                    startForm.style.display = 'block';
+                } else {
+                    startForm.style.display = 'none';
+                }
+            }
+        }
+
+        // 初期表示時にボタンの状態を設定
+        window.onload = function() {
+            updateStartButton();
+        };
+    </script>
+</body>
+</html>

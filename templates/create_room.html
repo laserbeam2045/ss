@@ -1,0 +1,49 @@
+<!-- templates/create_room.html -->
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>ルーム作成</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <h1>ルームを作成する</h1>
+    <form action="{{ url_for('create_room') }}" method="post" enctype="multipart/form-data">
+        <label for="room_name">ルーム名:</label>
+        <input type="text" name="room_name" id="room_name" required>
+        <h2>カードセットを追加:</h2>
+        <div id="card-sets">
+            <div class="card-set">
+                <input type="file" name="card_image" accept="image/*" required>
+                <input type="text" name="card_name" placeholder="カード名" required>
+            </div>
+        </div>
+        <button type="button" onclick="addCardSet()">カードセットを追加</button>
+        <button type="submit">ルームを作成する</button>
+    </form>
+
+    <script>
+        function addCardSet() {
+            var cardSets = document.getElementById('card-sets');
+            var newSet = document.createElement('div');
+            newSet.classList.add('card-set');
+            newSet.innerHTML = `
+                <input type="file" name="card_image" accept="image/*" required>
+                <input type="text" name="card_name" placeholder="カード名" required>
+            `;
+            cardSets.appendChild(newSet);
+        }
+    </script>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul>
+          {% for message in messages %}
+            <li>{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+</body>
+</html>

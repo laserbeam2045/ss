@@ -1,0 +1,26 @@
+<!-- templates/set_username.html -->
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>名前の設定</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <h1>名前を設定してください</h1>
+    <form action="{{ url_for('set_username') }}" method="post">
+        <input type="text" name="username" placeholder="ハンドルネーム" required>
+        <button type="submit">設定</button>
+    </form>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul>
+          {% for message in messages %}
+            <li>{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+</body>
+</html>
