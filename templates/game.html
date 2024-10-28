@@ -159,151 +159,151 @@
     </style>
 </head>
 <body>
-    <h1>{{ room.name }}</h1>
-    <p>現在のターン: <span id="current-turn">{{ current_turn }}</span></p>
-    <div id="cards-container">
-        {% for card in cards %}
-            <div class="card" data-id="{{ card.id }}">
-                <div class="card-inner">
-                    <div class="card-front">
-                        <img src="{{ url_for('static', filename='images/' + card.image) }}" alt="{{ card.name }}">
-                        <div class="card-text">{{ card.name }}</div>
-                    </div>
-                    <div class="card-back"></div>
-                </div>
-            </div>
-        {% endfor %}
-    </div>
+  <h1>{{ room.name }}</h1>
+  <p>現在のターン: <span id="current-turn">{{ current_turn }}</span></p>
+  <div id="cards-container">
+      {% for card in cards %}
+          <div class="card" data-id="{{ card.id }}">
+              <div class="card-inner">
+                  <div class="card-front">
+                      <img src="{{ url_for('static', filename='images/' + card.image) }}" alt="{{ card.name }}">
+                      <div class="card-text">{{ card.name }}</div>
+                  </div>
+                  <div class="card-back"></div>
+              </div>
+          </div>
+      {% endfor %}
+  </div>
 
-    <div id="game-over">
-        <h2>ゲーム終了！ランキング</h2>
-        <ol id="ranking-list"></ol>
-        <button id="back-button" onclick="redirectToIndex()">ルーム一覧へ戻る</button>
-    </div>
+  <div id="game-over">
+      <h2>ゲーム終了！ランキング</h2>
+      <ol id="ranking-list"></ol>
+      <button id="back-button" onclick="redirectToIndex()">ルーム一覧へ戻る</button>
+  </div>
 
-    <script type="text/javascript">
-        var socket = io();
+  <script type="text/javascript">
+      var socket = io();
 
-        var room_id = {{ room.id }};
-        var username = "{{ username }}";
+      var room_id = {{ room.id }};
+      var username = "{{ username }}";
 
-        // SocketIOへの接続時にルームに参加
-        socket.on('connect', function() {
-            console.log('SocketIO connected');
-            socket.emit('join_game', {'room': room_id, 'username': username});
-        });
+      // SocketIOへの接続時にルームに参加
+      socket.on('connect', function() {
+          console.log('SocketIO connected');
+          socket.emit('join_game', {'room': room_id, 'username': username});
+      });
 
-        // ゲーム状態の受信
-        socket.on('game_state', function(data) {
-            console.log('Game State Received:', data);
-            // カードの状態を更新
-            for (var card_id in data.cards) {
-                var card = data.cards[card_id];
-                var cardElement = document.querySelector('.card[data-id="' + card_id + '"]');
-                if (cardElement) {
-                    if (card.is_flipped || card.is_matched) {
-                        cardElement.classList.add('flipped');
-                    } else {
-                        cardElement.classList.remove('flipped');
-                    }
-                    if (card.is_matched) {
-                        cardElement.classList.add('matched');
-                    } else {
-                        cardElement.classList.remove('matched');
-                    }
-                }
-            }
-            // 現在のターンを更新
-            document.getElementById('current-turn').textContent = data.current_turn || "不明";
-        });
+      // ゲーム状態の受信
+      socket.on('game_state', function(data) {
+          console.log('Game State Received:', data);
+          // カードの状態を更新
+          for (var card_id in data.cards) {
+              var card = data.cards[card_id];
+              var cardElement = document.querySelector('.card[data-id="' + card_id + '"]');
+              if (cardElement) {
+                  if (card.is_flipped || card.is_matched) {
+                      cardElement.classList.add('flipped');
+                  } else {
+                      cardElement.classList.remove('flipped');
+                  }
+                  if (card.is_matched) {
+                      cardElement.classList.add('matched');
+                  } else {
+                      cardElement.classList.remove('matched');
+                  }
+              }
+          }
+          // 現在のターンを更新
+          document.getElementById('current-turn').textContent = data.current_turn || "不明";
+      });
 
-        // ゲーム開始時の処理（アラートなし）
-        socket.on('game_started', function(data) {
-            console.log('Game Started Event Received:', data);
-            if (data.room_id === room_id) {
-                // 必要に応じてページをリロードまたはUIを更新
-                // 例: リロードしてゲーム画面を表示
-                window.location.href = "/game/" + room_id;
-            }
-        });
+      // ゲーム開始時の処理（アラートなし）
+      socket.on('game_started', function(data) {
+          console.log('Game Started Event Received:', data);
+          if (data.room_id === room_id) {
+              // 必要に応じてページをリロードまたはUIを更新
+              // 例: リロードしてゲーム画面を表示
+              window.location.href = "/game/" + room_id;
+          }
+      });
 
-        // カードがめくられたときの処理
-        socket.on('card_flipped', function(data) {
-            console.log('Card Flipped Event Received:', data);
-            var cardElement = document.querySelector('.card[data-id="' + data.card_id + '"]');
-            if (cardElement) {
-                cardElement.classList.add('flipped');
-            }
-        });
+      // カードがめくられたときの処理
+      socket.on('card_flipped', function(data) {
+          console.log('Card Flipped Event Received:', data);
+          var cardElement = document.querySelector('.card[data-id="' + data.card_id + '"]');
+          if (cardElement) {
+              cardElement.classList.add('flipped');
+          }
+      });
 
-        // カードのマッチ結果の処理（アラートなし）
-        socket.on('match_result', function(data) {
-            console.log('Match Result Event Received:', data);
-            if (data.matched) {
-                // マッチしたカードを一定時間後に非表示にする
-                setTimeout(function() {
-                    var card1 = document.querySelector('.card[data-id="' + data.card1_id + '"]');
-                    var card2 = document.querySelector('.card[data-id="' + data.card2_id + '"]');
-                    if (card1) card1.classList.add('matched');
-                    if (card2) card2.classList.add('matched');
-                }, 500); // 500ミリ秒後に非表示
-            }
-            // スコアの更新や他のUIの更新が必要な場合はここに追加
-        });
+      // カードのマッチ結果の処理（アラートなし）
+      socket.on('match_result', function(data) {
+          console.log('Match Result Event Received:', data);
+          if (data.matched) {
+              // マッチしたカードを一定時間後に非表示にする
+              setTimeout(function() {
+                  var card1 = document.querySelector('.card[data-id="' + data.card1_id + '"]');
+                  var card2 = document.querySelector('.card[data-id="' + data.card2_id + '"]');
+                  if (card1) card1.classList.add('matched');
+                  if (card2) card2.classList.add('matched');
+              }, 500); // 500ミリ秒後に非表示
+          }
+          // スコアの更新や他のUIの更新が必要な場合はここに追加
+      });
 
-        // カードがリセットされたときの処理
-        socket.on('cards_reset', function(data) {
-            console.log('Cards Reset Event Received:', data);
-            var card1 = document.querySelector('.card[data-id="' + data.card1_id + '"]');
-            var card2 = document.querySelector('.card[data-id="' + data.card2_id + '"]');
-            if (card1) card1.classList.remove('flipped');
-            if (card2) card2.classList.remove('flipped');
-        });
+      // カードがリセットされたときの処理
+      socket.on('cards_reset', function(data) {
+          console.log('Cards Reset Event Received:', data);
+          var card1 = document.querySelector('.card[data-id="' + data.card1_id + '"]');
+          var card2 = document.querySelector('.card[data-id="' + data.card2_id + '"]');
+          if (card1) card1.classList.remove('flipped');
+          if (card2) card2.classList.remove('flipped');
+      });
 
-        // ターンが変更されたときの処理
-        socket.on('turn_changed', function(data) {
-            console.log('Turn Changed Event Received:', data);
-            document.getElementById('current-turn').textContent = data.current_turn;
-        });
+      // ターンが変更されたときの処理
+      socket.on('turn_changed', function(data) {
+          console.log('Turn Changed Event Received:', data);
+          document.getElementById('current-turn').textContent = data.current_turn;
+      });
 
-        // ゲームが終了したときの処理
-        socket.on('game_over', function(data) {
-            console.log('Game Over Event Received:', data);
-            // 少し遅延させて表示
-            setTimeout(function() {
-                document.getElementById('cards-container').style.display = 'none';
-                document.getElementById('game-over').style.display = 'block';
-                var rankingList = document.getElementById('ranking-list');
-                rankingList.innerHTML = '';
-                data.ranking.forEach(function(player) {
-                    var listItem = document.createElement('li');
-                    listItem.textContent = player.username + ' - ' + player.score + ' 点';
-                    rankingList.appendChild(listItem);
-                });
-            }, 500); // 500ミリ秒後に表示
-        });
+      // ゲームが終了したときの処理
+      socket.on('game_over', function(data) {
+          console.log('Game Over Event Received:', data);
+          // 少し遅延させて表示
+          setTimeout(function() {
+              document.getElementById('cards-container').style.display = 'none';
+              document.getElementById('game-over').style.display = 'block';
+              var rankingList = document.getElementById('ranking-list');
+              rankingList.innerHTML = '';
+              data.ranking.forEach(function(player) {
+                  var listItem = document.createElement('li');
+                  listItem.textContent = player.username + ' - ' + player.score + ' 点';
+                  rankingList.appendChild(listItem);
+              });
+          }, 500); // 500ミリ秒後に表示
+      });
 
-        // エラーメッセージの処理
-        socket.on('error', function(data) {
-            console.error('Error Event Received:', data.message);
-            // 必要に応じてユーザーにエラーメッセージを通知します。
-            // ここではコンソールにのみ出力しています。
-            // alert(data.message); // 必要に応じてこのalertも削除可能です
-        });
+      // エラーメッセージの処理
+      socket.on('error', function(data) {
+          console.error('Error Event Received:', data.message);
+          // 必要に応じてユーザーにエラーメッセージを通知します。
+          // ここではコンソールにのみ出力しています。
+          // alert(data.message); // 必要に応じてこのalertも削除可能です
+      });
 
-        // カードをクリックしたときの処理
-        document.querySelectorAll('.card').forEach(function(card) {
-            card.addEventListener('click', function() {
-                var cardId = this.getAttribute('data-id');
-                console.log('Card Clicked:', cardId);
-                socket.emit('flip_card', {'room': room_id, 'card_id': cardId, 'username': username});
-            });
-        });
+      // カードをクリックしたときの処理
+      document.querySelectorAll('.card').forEach(function(card) {
+          card.addEventListener('click', function() {
+              var cardId = this.getAttribute('data-id');
+              console.log('Card Clicked:', cardId);
+              socket.emit('flip_card', {'room': room_id, 'card_id': cardId, 'username': username});
+          });
+      });
 
-        // ゲーム終了後に一覧ページへ移動する関数
-        function redirectToIndex() {
-            window.location.href = "/";
-        }
-    </script>
+      // ゲーム終了後に一覧ページへ移動する関数
+      function redirectToIndex() {
+          window.location.href = "/";
+      }
+  </script>
 </body>
 </html>
