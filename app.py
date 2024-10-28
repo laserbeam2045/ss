@@ -26,7 +26,8 @@ os.makedirs('instance', exist_ok=True)
 
 # 拡張機能の初期化
 db = SQLAlchemy(app)
-socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins="*")  # async_mode を 'eventlet' に設定
+# socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins="*")  # async_mode を 'eventlet' に設定
+socketio = SocketIO(app, ping_timeout=60, ping_interval=25)
 Session(app)
 
 # データベースモデルの定義
