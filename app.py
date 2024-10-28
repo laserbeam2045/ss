@@ -540,24 +540,25 @@ def handle_flip_card(data):
                 if all_matched:
                     # 遅延後にランキングを作成して表示
                     def delayed_game_over():
-                        time.sleep(1)  # 1秒待機
-                        ranking = sorted(game_state['scores'].items(), key=lambda x: x[1], reverse=True)
-                        ranking_data = []
-                        for user_id, score in ranking:
-                            user_obj = User.query.get(user_id)
-                            ranking_data.append({'username': user_obj.name, 'score': score})
-                        socketio.emit('game_over', {'ranking': ranking_data}, room=room_id)
-                        print(f"ゲーム終了: Room ID: {room_id} のランキングが送信されました。")
+                        with app.app_context():
+                          time.sleep(1)  # 1秒待機
+                          ranking = sorted(game_state['scores'].items(), key=lambda x: x[1], reverse=True)
+                          ranking_data = []
+                          for user_id, score in ranking:
+                              user_obj = User.query.get(user_id)
+                              ranking_data.append({'username': user_obj.name, 'score': score})
+                          socketio.emit('game_over', {'ranking': ranking_data}, room=room_id)
+                          print(f"ゲーム終了: Room ID: {room_id} のランキングが送信されました。")
 
-                        # ルームの状態をリセット
-                        room_obj = Room.query.get(room_id)
-                        room_obj.status = 'waiting'
-                        db.session.commit()
+                          # ルームの状態をリセット
+                          room_obj = Room.query.get(room_id)
+                          room_obj.status = 'waiting'
+                          db.session.commit()
 
-                        # ゲーム状態を削除
-                        with game_states_lock:
-                            if room_id in game_states:
-                                del game_states[room_id]
+                          # ゲーム状態を削除
+                          with game_states_lock:
+                              if room_id in game_states:
+                                  del game_states[room_id]
 
                     # 背景タスクでdelayed_game_overを実行
                     socketio.start_background_task(delayed_game_over)
