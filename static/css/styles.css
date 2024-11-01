@@ -1,3 +1,78 @@
+html, body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  text-align: center;
+  margin: 0;
+  padding: 0;
+  width: 375px;
+  max-width: 375px;
+  height: auto;
+  background-color: #f9f9f9;
+}
+
+body {
+  padding-bottom: 32px;
+}
+
+h1, h2, h3 {
+  text-align: center;
+  color: #333;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  color: #555;
+  font-size: 14px;
+}
+
+input[type="number"] {
+  width: 100%; /* 幅を60pxに設定 */
+  padding: 8px;
+  margin-bottom: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-size: 14px;
+}
+
+input[type="text"] {
+  padding: 8px;
+  height: 37px;
+  margin-bottom: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-size: 14px;
+}
+
+input[type="file"] {
+  width: 160px;
+}
+
+/* ボタンのスタイル */
+button, .delete-button, .view-button {
+  background-color: #007BFF;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+  box-shadow: none; /* 削除ボタンの影を削除 */
+  text-wrap: nowrap;
+  margin-top: 12px;
+}
+
+button:hover, .delete-button:hover, .view-button:hover {
+  background-color: #0056b3;
+}
+
+li {
+  text-align: left;
+  margin-left: 20px;
+}
+
 .card {
   width: 100px;
   height: 150px;
