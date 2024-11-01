@@ -6,6 +6,7 @@
     <meta charset="UTF-8">
     <title>ゲーム画面</title>
     <!-- 必要なCSSやJSのリンク -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <style>
         body {
@@ -81,6 +82,11 @@
             background-color: #f0f0f0;
             width: 100%;
             box-sizing: border-box;
+            position: absolute;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            line-height: 12px;
+            color: white;
         }
         .card-back {
             background-color: #333;
@@ -128,34 +134,6 @@
         #back-button:hover {
             background-color: #45a049;
         }
-        /* レスポンシブデザイン */
-        @media (max-width: 600px) {
-            h1 {
-                font-size: 1.5em;
-            }
-            #current-turn {
-                font-size: 1em;
-            }
-            #cards-container {
-                grid-template-columns: repeat(2, 1fr); /* スマホでは1行に2枚 */
-                gap: 5px;
-                max-width: 100%;
-                padding: 5px;
-            }
-            .card {
-                padding-top: 100%; /* アスペクト比を調整 */
-            }
-            .card-front .card-text {
-                font-size: 14px; /* スマホでも読みやすいフォントサイズ */
-            }
-            #game-over h2 {
-                font-size: 1.5em;
-            }
-            #back-button {
-                font-size: 0.9em;
-                padding: 8px 16px;
-            }
-        }
     </style>
 </head>
 <body>
@@ -176,7 +154,7 @@
   </div>
 
   <div id="game-over">
-      <h2>ゲーム終了！ランキング</h2>
+      <h2>ゲーム終了！結果発表</h2>
       <ol id="ranking-list"></ol>
       <button id="back-button" onclick="redirectToIndex()">ルーム一覧へ戻る</button>
   </div>
@@ -277,7 +255,7 @@
               rankingList.innerHTML = '';
               data.ranking.forEach(function(player) {
                   var listItem = document.createElement('li');
-                  listItem.textContent = player.username + ' - ' + player.score + ' 点';
+                  listItem.textContent = player.username + ' - ' + player.score * 2 + ' 枚';
                   rankingList.appendChild(listItem);
               });
           }, 500); // 500ミリ秒後に表示
